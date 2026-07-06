@@ -17,29 +17,25 @@ function mapToWandbox(cfLangId: string): { compiler: string; options: string; fi
   // C variants
   if (['43', '75'].includes(id)) return { compiler: 'gcc-head-c', options: 'warning,c17', fileName: 'main.c' }
   // Python 3
-  if (['31', '40'].includes(id)) return { compiler: 'cpython-3.12.0', options: '', fileName: 'main.py' }
-  if (['70', '41'].includes(id)) return { compiler: 'cpython-3.12.0', options: '', fileName: 'main.py' } // PyPy → CPython fallback
-  if (['7'].includes(id)) return { compiler: 'cpython-3.12.0', options: '', fileName: 'main.py' }
+  if (['31', '40', '70', '41', '7'].includes(id)) return { compiler: 'cpython-head', options: '', fileName: 'main.py' }
   // Java
-  if (['87', '60', '36', '23'].includes(id)) return { compiler: 'openjdk-head', options: '', fileName: 'Main.java' }
+  if (['87', '60', '36', '23'].includes(id)) return { compiler: 'openjdk-jdk-22+36', options: '', fileName: 'Main.java' }
   // Rust
-  if (['75', '49'].includes(id)) return { compiler: 'rust-head', options: '', fileName: 'main.rs' }
+  if (['75', '49'].includes(id)) return { compiler: 'rust-1.82.0', options: '', fileName: 'main.rs' }
   // Go
-  if (['32'].includes(id)) return { compiler: 'go-head', options: '', fileName: 'main.go' }
+  if (['32'].includes(id)) return { compiler: 'go-1.23.2', options: '', fileName: 'main.go' }
   // JavaScript (Node.js)
-  if (['34', '55'].includes(id)) return { compiler: 'nodejs-head', options: '', fileName: 'main.js' }
+  if (['34', '55'].includes(id)) return { compiler: 'nodejs-20.17.0', options: '', fileName: 'main.js' }
   // Ruby
-  if (['67'].includes(id)) return { compiler: 'ruby-head', options: '', fileName: 'main.rb' }
+  if (['67'].includes(id)) return { compiler: 'ruby-4.0.2', options: '', fileName: 'main.rb' }
   // PHP
-  if (['6'].includes(id)) return { compiler: 'php-head', options: '', fileName: 'main.php' }
+  if (['6'].includes(id)) return { compiler: 'php-8.3.12', options: '', fileName: 'main.php' }
   // C#
-  if (['65', '9', '79'].includes(id)) return { compiler: 'mono-head', options: '', fileName: 'Main.cs' }
+  if (['65', '9', '79'].includes(id)) return { compiler: 'mono-6.12.0.199', options: '', fileName: 'Main.cs' }
   // Perl
-  if (['13'].includes(id)) return { compiler: 'perl-head', options: '', fileName: 'main.pl' }
+  if (['13'].includes(id)) return { compiler: 'perl-5.42.0', options: '', fileName: 'main.pl' }
   // Haskell
-  if (['12'].includes(id)) return { compiler: 'ghc-head', options: '', fileName: 'main.hs' }
-  // Kotlin
-  if (['83', '48'].includes(id)) return { compiler: 'kotlin-head', options: '', fileName: 'main.kt' }
+  if (['12'].includes(id)) return { compiler: 'ghc-9.10.1', options: '', fileName: 'main.hs' }
   // Default: C++ as most CF users use it
   return { compiler: 'gcc-head', options: 'warning,gnu++2b', fileName: 'main.cpp' }
 }

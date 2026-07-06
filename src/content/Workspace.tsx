@@ -376,7 +376,39 @@ export default function Workspace({
     return link?.textContent?.trim() || null
   }
 
-  // Execute code via background service worker → Piston API
+  function mapToWandbox(cfLangId: string): { compiler: string; options: string; fileName: string } | null {
+    const id = cfLangId.trim()
+    // C++ variants
+    if (['80', '89'].includes(id)) return { compiler: 'gcc-13.2.0', options: 'warning,gnu++2b', fileName: 'main.cpp' }
+    if (['73', '72'].includes(id)) return { compiler: 'gcc-13.2.0', options: 'warning,gnu++2a', fileName: 'main.cpp' }
+    if (['54', '52', '50', '42', '61'].includes(id)) return { compiler: 'gcc-13.2.0', options: 'warning,gnu++17', fileName: 'main.cpp' }
+    // C variants
+    if (['43', '75'].includes(id)) return { compiler: 'gcc-13.2.0-c', options: 'warning,c17', fileName: 'main.c' }
+    // Python 3
+    if (['31', '40', '70', '41', '7'].includes(id)) return { compiler: 'cpython-3.13.8', options: '', fileName: 'main.py' }
+    // Java
+    if (['87', '60', '36', '23'].includes(id)) return { compiler: 'openjdk-jdk-22+36', options: '', fileName: 'Main.java' }
+    // Rust
+    if (['75', '49'].includes(id)) return { compiler: 'rust-1.82.0', options: '', fileName: 'main.rs' }
+    // Go
+    if (['32'].includes(id)) return { compiler: 'go-1.23.2', options: '', fileName: 'main.go' }
+    // JavaScript (Node.js)
+    if (['34', '55'].includes(id)) return { compiler: 'nodejs-20.17.0', options: '', fileName: 'main.js' }
+    // Ruby
+    if (['67'].includes(id)) return { compiler: 'ruby-4.0.2', options: '', fileName: 'main.rb' }
+    // PHP
+    if (['6'].includes(id)) return { compiler: 'php-8.3.12', options: '', fileName: 'main.php' }
+    // C#
+    if (['65', '9', '79'].includes(id)) return { compiler: 'mono-6.12.0.199', options: '', fileName: 'Main.cs' }
+    // Perl
+    if (['13'].includes(id)) return { compiler: 'perl-5.42.0', options: '', fileName: 'main.pl' }
+    // Haskell
+    if (['12'].includes(id)) return { compiler: 'ghc-9.10.1', options: '', fileName: 'main.hs' }
+    // Default: C++ as most CF users use it
+    return { compiler: 'gcc-13.2.0', options: 'warning,gnu++2b', fileName: 'main.cpp' }
+  }
+
+  // Execute code via Wandbox API directly from content script (bypassing SW timeouts)
   async function executeCode(sourceCode: string, inputText: string, languageId: string): Promise<{
     output: string
     stderr: string
@@ -384,27 +416,45 @@ export default function Workspace({
     isCompileError: boolean
     signal: string | null
   }> {
-    return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage(
-        {
-          type: 'cfp/execute-code',
-          source: sourceCode,
-          input: inputText,
-          langId: languageId
-        },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message || 'Extension communication error'))
-            return
-          }
-          if (!response || !response.success) {
-            reject(new Error(response?.error || 'Code execution failed'))
-            return
-          }
-          resolve(response)
-        }
-      )
+    const lang = mapToWandbox(languageId)
+    if (!lang) throw new Error('Unsupported language for code execution')
+
+    const payload = {
+      compiler: lang.compiler,
+      code: sourceCode,
+      options: lang.options,
+      stdin: inputText || '',
+      save: false
+    }
+
+    const res = await fetch('https://wandbox.org/api/compile.json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     })
+    
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`Execution API Error (${res.status}): ${text}`)
+    }
+    
+    const data = await res.json()
+    const exitCode = parseInt(data.status || '0', 10)
+    const compilerError = (data.compiler_error || '').trim()
+    const compilerOutput = (data.compiler_output || '').trim()
+    const programOutput = (data.program_output || '')
+    const programError = (data.program_error || '').trim()
+
+    // If there's a compiler error and no program output, it's a CE
+    const isCompileError = compilerError.length > 0 && programOutput.length === 0 && exitCode !== 0
+    
+    return {
+      output: programOutput,
+      stderr: isCompileError ? compilerError : (programError || compilerError),
+      exitCode: exitCode,
+      isCompileError: isCompileError,
+      signal: data.signal || null
+    }
   }
 
   // Run a Custom Test Case
@@ -676,6 +726,19 @@ export default function Workspace({
       formData.append('source', code)
       formData.append('tabSize', '4')
 
+      // Codeforces anti-bot tokens
+      const ftaaInput = document.querySelector('input[name="ftaa"]') as HTMLInputElement
+      const bfaaInput = document.querySelector('input[name="bfaa"]') as HTMLInputElement
+      if (ftaaInput?.value) formData.append('ftaa', ftaaInput.value)
+      else if (window.localStorage.getItem('ftaa')) formData.append('ftaa', window.localStorage.getItem('ftaa')!)
+      
+      if (bfaaInput?.value) formData.append('bfaa', bfaaInput.value)
+      else if (window.localStorage.getItem('bfaa')) formData.append('bfaa', window.localStorage.getItem('bfaa')!)
+      
+      // Some Codeforces forms also use _tta
+      const ttaInput = document.querySelector('input[name="_tta"]') as HTMLInputElement
+      if (ttaInput?.value) formData.append('_tta', ttaInput.value)
+
       const res = await fetch(submitUrl, {
         method: 'POST',
         body: formData
@@ -683,6 +746,29 @@ export default function Workspace({
 
       if (!res.ok) {
         throw new Error(`Submission failed with status ${res.status}`)
+      }
+
+      // Codeforces redirects to /status (or similar) on success.
+      // If we are still on a /submit URL or the same problem URL, it likely failed.
+      const html = await res.text()
+      
+      if (!res.url.includes('/status') && !res.url.includes('/my')) {
+        // Find the actual error text, ignoring empty placeholder spans
+        const errorSpans = html.match(/<span class="error[^>]*>([^<]+)<\/span>/g)
+        let actualError = 'Form was rejected without a specific error message.'
+        if (errorSpans) {
+          for (const spanHtml of errorSpans) {
+            const text = spanHtml.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, '').trim()
+            if (text.length > 0) {
+              actualError = text
+              break
+            }
+          }
+        }
+        showToast(`Submission rejected: ${actualError}`, 'error')
+        setSubmitStatus('done')
+        setSubmitVerdict('REJECTED')
+        return
       }
 
       setSubmitStatus('queued')
@@ -736,9 +822,9 @@ export default function Workspace({
                   setSubmitMemory(match.memoryConsumedBytes ? Math.round(match.memoryConsumedBytes / 1024) : null)
 
                   if (match.verdict === 'OK') {
-                    showToast('✅ ACCEPTED!', 'success')
+                    showToast('ACCEPTED!', 'success')
                   } else {
-                    showToast(`❌ VERDICT: ${match.verdict} on test ${match.passedTestCount + 1}`, 'error')
+                    showToast(`VERDICT: ${match.verdict} on test ${match.passedTestCount + 1}`, 'error')
                     // Attempt to fetch failed test case for non-contest problems
                     if (!isContestProblem) {
                       fetchFailedTestCase(String(match.id))
@@ -779,6 +865,7 @@ export default function Workspace({
   // Vim bindings mount
   const handleEditorDidMount = (editor: any, monacoInstance: any) => {
     editorRef.current = editor
+    ;(window as any).monaco = monacoInstance
     
     // Set font size and Monaco defaults
     editor.updateOptions({
@@ -808,9 +895,13 @@ export default function Workspace({
     }
 
     // 1. Vim Mode
-    if (settings.keyboardMode === 'vim') {
+    if (settings.isVimMode) {
       const statusNode = document.getElementById('cfp-vim-status')
-      vimModeRef.current = initVimMode(editor, statusNode)
+      try {
+        vimModeRef.current = initVimMode(editor, statusNode)
+      } catch (e) {
+        console.error('Vim mode init failed:', e)
+      }
     }
 
     // 2. Emacs Mode
@@ -883,11 +974,17 @@ export default function Workspace({
       if (settings.isVimMode) {
         if (!vimModeRef.current) {
           const statusNode = document.getElementById('cfp-vim-status')
-          vimModeRef.current = initVimMode(editorRef.current, statusNode)
+          try {
+            vimModeRef.current = initVimMode(editorRef.current, statusNode)
+          } catch (e) {
+            console.error('Vim mode init failed dynamically:', e)
+          }
         }
       } else {
         if (vimModeRef.current) {
-          vimModeRef.current.dispose()
+          try {
+            vimModeRef.current.dispose()
+          } catch(e) {}
           vimModeRef.current = null
           const statusNode = document.getElementById('cfp-vim-status')
           if (statusNode) statusNode.innerHTML = ''
@@ -919,16 +1016,16 @@ export default function Workspace({
   // ── Render Helper: Submission Status Badge ──────────────────────
   function getSubmitStatusBadge() {
     const statusMap: Record<string, { text: string; className: string }> = {
-      'submitting': { text: '📤 Uploading...', className: 'cfp-badge--pending' },
-      'queued': { text: '🕐 In Queue', className: 'cfp-badge--pending' },
-      'testing': { text: `⚡ ${submitVerdict || 'Testing...'}`, className: 'cfp-badge--pending' },
+      'submitting': { text: 'Uploading...', className: 'cfp-badge--pending' },
+      'queued': { text: ' In Queue', className: 'cfp-badge--pending' },
+      'testing': { text: ` ${submitVerdict || 'Testing...'}`, className: 'cfp-badge--pending' },
     }
 
     if (submitStatus === 'done') {
       if (submitVerdict === 'OK') {
-        return { text: '✅ Accepted', className: 'cfp-badge--ok' }
+        return { text: 'Accepted', className: 'cfp-badge--ok' }
       }
-      return { text: `❌ ${submitVerdict}`, className: 'cfp-badge--err' }
+      return { text: `${submitVerdict}`, className: 'cfp-badge--err' }
     }
 
     return statusMap[submitStatus] || { text: 'Idle', className: '' }
@@ -1029,7 +1126,7 @@ export default function Workspace({
           onClick={loadTemplate}
           title="Load your saved code template"
         >
-          📄 Load Template
+          Load Template
         </button>
 
         {/* Template Save */}
@@ -1038,7 +1135,7 @@ export default function Workspace({
           onClick={saveCodeAsTemplate}
           title="Save current code as template"
         >
-          💾 Save Template
+          Save Template
         </button>
 
         {/* Spacer */}
@@ -1050,7 +1147,7 @@ export default function Workspace({
           onClick={runSamples}
           disabled={samplesStatus === 'running'}
         >
-          {samplesStatus === 'running' ? '⏳ Running...' : '▶ Run Samples'}
+          {samplesStatus === 'running' ? 'Running...' : 'Run Samples'}
         </button>
 
         {/* Submit */}
@@ -1059,11 +1156,11 @@ export default function Workspace({
           onClick={submitSolutionCode}
           disabled={submitStatus === 'submitting' || submitStatus === 'testing' || submitStatus === 'queued'}
         >
-          {submitStatus === 'submitting' && '📤 Submitting...'}
-          {submitStatus === 'queued' && '🕐 In Queue...'}
-          {submitStatus === 'testing' && '⚡ Testing...'}
-          {submitStatus === 'idle' && '🚀 Submit'}
-          {submitStatus === 'done' && '🔄 Resubmit'}
+          {submitStatus === 'submitting' && 'Submitting...'}
+          {submitStatus === 'queued' && ' In Queue...'}
+          {submitStatus === 'testing' && ' Testing...'}
+          {submitStatus === 'idle' && 'Submit'}
+          {submitStatus === 'done' && 'Resubmit'}
         </button>
       </div>
 
@@ -1128,7 +1225,7 @@ export default function Workspace({
                 gap: '6px'
               }}
             >
-              💻 Solve & Open IDE
+               Solve & Open IDE
             </button>
           )}
         </div>
@@ -1173,7 +1270,7 @@ export default function Workspace({
                 // Monaco handles its own internal copy/paste via commands, 
                 // not the DOM paste event, so any DOM paste event is external)
                 e.preventDefault()
-                showToast('🏆 Competitive Mode: External paste disabled. Type your solution!', 'error')
+                showToast(' Competitive Mode: External paste disabled. Type your solution!', 'error')
               }
             }}
           >
@@ -1445,7 +1542,7 @@ export default function Workspace({
                                 style={{ fontSize: '11px', padding: '4px 10px' }}
                                 onClick={() => addFailedTestToSamples(failedTestData.input, failedTestData.expected)}
                               >
-                                ➕ Use Test Case
+                                Use Test Case
                               </button>
                             </div>
                             {failedTestData.input && (

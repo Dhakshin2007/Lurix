@@ -34,7 +34,7 @@ export default defineManifest({
   host_permissions: ['https://codeforces.com/*', 'https://*.codeforces.com/*', 'https://wandbox.org/*'],
   web_accessible_resources: [
     {
-      resources: ['public/*', 'monaco/**/*'],
+      resources: ['Lurix-Logo.png', 'public/*', 'monaco/**/*'],
       matches: ['https://codeforces.com/*', 'https://*.codeforces.com/*'],
     },
   ],
