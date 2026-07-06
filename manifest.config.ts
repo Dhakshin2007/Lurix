@@ -27,7 +27,7 @@ export default defineManifest({
     {
       matches: ['https://codeforces.com/*', 'https://*.codeforces.com/*'],
       js: ['src/content/index.tsx'],
-      run_at: 'document_idle',
+      run_at: 'document_end',
     },
   ],
   permissions: ['storage', 'unlimitedStorage'],

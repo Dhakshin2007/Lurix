@@ -107,6 +107,34 @@ export default function Workspace({
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'queued' | 'testing' | 'done'>('idle')
   const [submitId, setSubmitId] = useState<string | null>(null)
   const [submitVerdict, setSubmitVerdict] = useState<string | null>(null)
+  
+  // Competitive Mode
+  const [isCompetitiveMode, setIsCompetitiveMode] = useState(false)
+  const [elapsedTime, setElapsedTime] = useState(0)
+
+  // Fullscreen and Timer Effect
+  useEffect(() => {
+    let interval: any = null
+    const rootEl = document.getElementById('cfp-workspace-root')
+    
+    if (isCompetitiveMode) {
+      if (rootEl && !document.fullscreenElement) {
+        rootEl.requestFullscreen().catch((err) => {
+          console.error('Error attempting to enable fullscreen:', err)
+        })
+      }
+      interval = setInterval(() => setElapsedTime(t => t + 1), 1000)
+    } else {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {})
+      }
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [isCompetitiveMode])
+
   const [submitPassed, setSubmitPassed] = useState<number | null>(null)
   const [submitTime, setSubmitTime] = useState<number | null>(null)
   const [submitMemory, setSubmitMemory] = useState<number | null>(null)
@@ -404,8 +432,14 @@ export default function Workspace({
     if (['13'].includes(id)) return { compiler: 'perl-5.42.0', options: '', fileName: 'main.pl' }
     // Haskell
     if (['12'].includes(id)) return { compiler: 'ghc-9.10.1', options: '', fileName: 'main.hs' }
-    // Default: C++ as most CF users use it
-    return { compiler: 'gcc-13.2.0', options: 'warning,gnu++2b', fileName: 'main.cpp' }
+    
+    // Kotlin is NOT supported by Wandbox. 
+    // We explicitly let it fall through to return null rather than compiling as C++
+    if (['83', '48'].includes(id)) return null;
+
+    // Default to null instead of C++ so unsupported languages show a clear error
+    // instead of throwing massive C++ syntax errors when compiled incorrectly.
+    return null
   }
 
   // Execute code via Wandbox API directly from content script (bypassing SW timeouts)
@@ -1119,6 +1153,28 @@ export default function Workspace({
         >
           Vim
         </button>
+
+        {/* Competitive Mode Toggle */}
+        <button
+          className={`cfp-workspace__btn ${isCompetitiveMode ? 'cfp-workspace__btn--active' : ''}`}
+          onClick={() => setIsCompetitiveMode(!isCompetitiveMode)}
+          title="Toggle Competitive Fullscreen Mode"
+        >
+          Competitive
+        </button>
+        
+        {/* Live Timer (Only shows in competitive mode) */}
+        {isCompetitiveMode && (
+          <div className="cfp-competitive-timer" style={{
+            marginLeft: '8px',
+            fontFamily: 'var(--cfp-font-mono, monospace)',
+            fontWeight: 700,
+            fontSize: '14px',
+            color: 'var(--cfp-accent)'
+          }}>
+            {String(Math.floor(elapsedTime / 60)).padStart(2, '0')}:{String(elapsedTime % 60).padStart(2, '0')}
+          </div>
+        )}
 
         {/* Template Load */}
         <button
