@@ -5,7 +5,7 @@
 .cfp-dock {
   position: fixed;
   right: 20px;
-  bottom: 20px;
+  bottom: 48px;
   z-index: 2147483647;
   font-family: var(--cfp-font-sans, -apple-system, sans-serif);
 }

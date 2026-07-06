@@ -22,6 +22,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    assetsInlineLimit: 1000000, // Inline fonts up to 1MB to fix Monaco icons
     rollupOptions: {
       output: {
         chunkFileNames: 'assets/chunk-[hash].js',

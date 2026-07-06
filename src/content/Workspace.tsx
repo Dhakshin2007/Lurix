@@ -908,7 +908,8 @@ export default function Workspace({
       minimap: { enabled: true },
       lineNumbers: 'on',
       cursorSmoothCaretAnimation: 'on',
-      cursorBlinking: 'smooth',
+      cursorBlinking: 'solid',
+      cursorWidth: 4, // Thicker cursor for better visibility
       smoothScrolling: true,
       folding: true,
       bracketPairColorization: { enabled: true },
@@ -1668,16 +1669,21 @@ export default function Workspace({
       {/* Watermark */}
       <div className="cfp-watermark" style={{
         position: 'absolute',
-        bottom: '8px',
-        right: '16px',
-        fontSize: '10px',
+        bottom: '12px',
+        right: '20px',
+        fontSize: '11px',
+        fontWeight: 600,
+        letterSpacing: '0.05em',
+        fontFamily: 'var(--cfp-font-sans, system-ui, sans-serif)',
+        textTransform: 'uppercase',
         color: 'var(--cfp-text-muted)',
-        opacity: 0.5,
+        opacity: 0.85,
         pointerEvents: 'none',
         userSelect: 'none',
-        zIndex: 100
+        zIndex: 100,
+        textShadow: '0 1px 2px rgba(0,0,0,0.1)'
       }}>
-        Built by Dhakshin
+        Built by <span style={{ color: 'var(--cfp-accent)' }}>Dhakshin</span>
       </div>
     </div>
   )
