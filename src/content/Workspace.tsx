@@ -50,6 +50,7 @@ type VerdictStatus = 'idle' | 'running' | 'done' | 'error'
 // Default console height when maximizing
 const DEFAULT_CONSOLE_HEIGHT = 250
 
+let snippetsRegistered = false
 export default function Workspace({
   problem,
   problemTitle,
@@ -453,9 +454,17 @@ export default function Workspace({
     const lang = mapToWandbox(languageId)
     if (!lang) throw new Error('Unsupported language for code execution')
 
+    // 🛠️ Java Execution Hack: Wandbox forces the file name to be `prog.java`.
+    // If the user's code has `public class Main`, Java throws an error because the filename doesn't match.
+    // Codeforces REQUIRES `public class`, so we must strip `public` *only* for local Wandbox execution!
+    let executableCode = sourceCode
+    if (lang.compiler.includes('openjdk')) {
+      executableCode = executableCode.replace(/public\s+class/, 'class')
+    }
+
     const payload = {
       compiler: lang.compiler,
-      code: sourceCode,
+      code: executableCode,
       options: lang.options,
       stdin: inputText || '',
       save: false
@@ -916,8 +925,64 @@ export default function Workspace({
       autoClosingBrackets: 'always',
       autoClosingQuotes: 'always',
       wordWrap: 'on',
-      tabSize: 4
+      tabSize: 4,
+      suggestOnTriggerCharacters: true,
+      quickSuggestions: { other: true, comments: false, strings: false },
+      wordBasedSuggestions: 'currentDocument'
     })
+
+    if (!snippetsRegistered) {
+      monacoInstance.languages.registerCompletionItemProvider('cpp', {
+        provideCompletionItems: (model: any, position: any) => {
+          const suggestions = [
+            {
+              label: '#include',
+              kind: monacoInstance.languages.CompletionItemKind.Snippet,
+              insertText: '#include <${1:iostream}>\n',
+              insertTextRules: monacoInstance.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Include standard library header'
+            },
+            {
+              label: '#include <bits/stdc++.h>',
+              kind: monacoInstance.languages.CompletionItemKind.Snippet,
+              insertText: '#include <bits/stdc++.h>\n',
+              insertTextRules: monacoInstance.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Competitive Programming Master Header'
+            },
+            {
+              label: 'using namespace std',
+              kind: monacoInstance.languages.CompletionItemKind.Snippet,
+              insertText: 'using namespace std;\n',
+              insertTextRules: monacoInstance.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Use standard namespace'
+            },
+            {
+              label: 'main',
+              kind: monacoInstance.languages.CompletionItemKind.Snippet,
+              insertText: 'int main() {\n\t${1}\n\treturn 0;\n}',
+              insertTextRules: monacoInstance.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Main function block'
+            },
+            {
+              label: 'for',
+              kind: monacoInstance.languages.CompletionItemKind.Snippet,
+              insertText: 'for (int ${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++) {\n\t${3}\n}',
+              insertTextRules: monacoInstance.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Standard for loop'
+            },
+            {
+              label: 'fastio',
+              kind: monacoInstance.languages.CompletionItemKind.Snippet,
+              insertText: 'ios_base::sync_with_stdio(false);\ncin.tie(NULL);\n',
+              insertTextRules: monacoInstance.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Fast I/O for competitive programming'
+            }
+          ];
+          return { suggestions };
+        }
+      })
+      snippetsRegistered = true
+    }
 
     // External paste works by default since we removed competitive mode overrides.
 
