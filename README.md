@@ -42,4 +42,4 @@ Lurix Pro is a premium browser extension designed to transform your Codeforces e
 
 If you make modifications to the extension, simply run `npm run build` again and refresh the extension in the `chrome://extensions/` page.
 
-> **Watermark**: Built by Dhakshin
+> **Watermark**: Built by Dhakshin & Venkat
