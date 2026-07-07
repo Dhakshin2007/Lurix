@@ -1683,7 +1683,7 @@ export default function Workspace({
         zIndex: 100,
         textShadow: '0 1px 2px rgba(0,0,0,0.1)'
       }}>
-        Built by <span style={{ color: 'var(--cfp-accent)' }}>Dhakshin</span>
+        Built by <span style={{ color: 'var(--cfp-accent)' }}>Dhakshin & Venkat</span>
       </div>
     </div>
   )
