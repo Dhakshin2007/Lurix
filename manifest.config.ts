@@ -3,20 +3,20 @@ import pkg from './package.json'
 
 export default defineManifest({
   manifest_version: 3,
-  name: 'Lurix',
+  name: 'Lurix: Codeforces IDE & Auto-Runner',
   description: 'Practice Without Friction',
   version: pkg.version,
   icons: {
-    16: 'public/Lurix-Logo.png',
-    48: 'public/Lurix-Logo.png',
-    128: 'public/Lurix-Logo.png',
+    16: 'Lurix-Logo.png',
+    48: 'Lurix-Logo.png',
+    128: 'Lurix-Logo.png',
   },
   action: {
     default_popup: 'src/popup/index.html',
     default_icon: {
-      16: 'public/Lurix-Logo.png',
-      48: 'public/Lurix-Logo.png',
-      128: 'public/Lurix-Logo.png',
+      16: 'Lurix-Logo.png',
+      48: 'Lurix-Logo.png',
+      128: 'Lurix-Logo.png',
     },
   },
   background: {

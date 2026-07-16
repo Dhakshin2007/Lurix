@@ -1,0 +1,38 @@
+Lurix: Practice Without Friction.
+
+Lurix is a comprehensive, professional-grade Chrome Extension designed to integrate a native, IDE-level competitive programming environment directly into Codeforces. By consolidating the code editor, terminal, and browser into a single unified interface, Lurix eliminates context switching and streamlines the problem-solving workflow.
+
+CORE IDE ENGINE (POWERED BY MONACO)
+Lurix injects the Monaco Editor engine (the same architecture that powers VS Code) directly into Codeforces problem pages. 
+- Intellisense & Snippets: Includes instantaneous, rich autocompletion. Standard typing shortcuts expand into comprehensive competitive programming boilerplate (e.g., C++ headers, standard namespaces, loops, and fast I/O configurations).
+- Native Keybindings: Full, native support for Vim and Emacs workflows directly within the browser environment.
+- Local-First Caching: Code is cached locally in real-time. In the event of an accidental tab closure or page refresh, your progress is automatically preserved and instantly restored.
+
+INSTANT LOCAL EXECUTION
+- Zero-Queue Run Engine: Test cases are executed using a custom local API runner, completely bypassing the standard Codeforces server queue for instantaneous feedback.
+- Multi-Test Auto-Runner: Lurix automatically scrapes all sample test cases from the active problem page and evaluates your code against all cases simultaneously, outputting exact expected-versus-actual diffing.
+- Failed Test Case Fetcher: Upon a rejected submission, Lurix automatically extracts the hidden failed test case data and injects it straight into your IDE for immediate debugging.
+
+PREMIUM INTERFACE OVERHAUL
+The standard Codeforces interface is completely modernized. 
+- Problemset tables feature a clean, minimal aesthetic with responsive hover states.
+- Problem tags are encased in distinct, highly readable containers.
+- Difficulty ratings are dynamically color-coded to provide immediate visual hierarchy.
+- Solved and failed problems are softly highlighted to give users a clear, bird's-eye view of their historical progress.
+
+COMPETITIVE MODE
+A dedicated focus toggle hooks into the browser's Fullscreen API, hiding the operating system and browser UI to eliminate external distractions. A precise, monospaced live stopwatch begins ticking the moment you enter Competitive Mode to facilitate exact solve-time tracking.
+
+Built for competitive programmers, Lurix delivers the seamless, modern coding experience that the Codeforces platform has always needed.
+
+---
+
+[SINGLE PURPOSE DESCRIPTION FOR PRIVACY TAB]
+Lurix seamlessly injects a full-featured code editor and execution environment directly into Codeforces problem pages, allowing users to write, test, and submit competitive programming solutions without leaving the browser tab.
+
+---
+
+[PERMISSION JUSTIFICATIONS]
+1. storage & unlimitedStorage: Required to locally cache user-written code in real-time. This prevents data loss if a user accidentally closes the tab or refreshes the page, ensuring their progress is always preserved without requiring external servers.
+2. host_permissions (https://*.codeforces.com/*): Required to inject the editor UI directly into the DOM of Codeforces problem pages, extract sample test cases, and automatically submit the user's code to the Codeforces servers.
+3. host_permissions (https://wandbox.org/*): Required to securely send the user's code to the Wandbox API for instantaneous, remote execution against local test cases without relying on the delayed Codeforces submission queue.

@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import Editor, { loader } from '@monaco-editor/react'
 import * as monaco from 'monaco-editor'
 import { initVimMode } from 'monaco-vim'
+
+// Force @monaco-editor/react to use local monaco bundle instead of CDN
+loader.config({ monaco })
 import type { ProblemRef, LanguageOption } from '@/shared/problem'
 import { getSampleTests, fetchAvailableLanguages } from '@/shared/problem'
 import type { SampleTest } from '@/shared/problem'
